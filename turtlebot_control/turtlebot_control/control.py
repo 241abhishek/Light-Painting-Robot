@@ -21,6 +21,19 @@ from std_srvs.srv import Empty
 
 import math
 import numpy as np
+from enum import Enum, auto
+
+class State(Enum):
+    """
+    Current state of the system.
+
+    Determines what the main timer function should be doing on each iteration
+
+    """
+
+    MOVE_POSE = (auto(),)  # turtle is moving to the desired pose
+    MOVE_PATH = (auto(),)  # turtle is moving along a deired path obtained from the gcode file
+    STOPPED = (auto(),) # turtle is not moving
 
 def read_coordinates_from_file(filename):
     """
@@ -48,6 +61,20 @@ def read_coordinates_from_file(filename):
                         y = float(token[1:])
                         coordinates.append((g, x, y))
     return coordinates
+
+def waypoint_parser(coordinates):
+    """Convert the gcode coordinates into waypoint poses."""
+    waypoints = []
+    for i in range(len(coordinates)-1):
+        x = coordinates[i][1]
+        y = coordinates[i][2]
+        del_x = coordinates[i+1][1] - coordinates[i][1]
+        del_y = coordinates[i+1][2] - coordinates[i][2]
+        theta = math.atan2(del_y, del_x)
+        waypoints.append((x,y,theta))
+    
+    waypoints.append((coordinates[-1][1], coordinates[-1][2], 0.0))
+    return waypoints
 
 class TurtleControl(Node):
     """This node publishes velocity commands to control the turtlebot."""
@@ -80,6 +107,7 @@ class TurtleControl(Node):
         try:
             # read coordinates from the gcode file
             self.coordinates = read_coordinates_from_file(self.param_filepath)
+            self.waypoints = waypoint_parser(self.coordinates)
         except:
             self.get_logger().error("Could not read coordinates from the gcode file, please check the filepath parameter")
             self.coordinates = []
@@ -102,11 +130,43 @@ class TurtleControl(Node):
         self.des_x = 0.0
         self.des_y = 0.0
         self.des_theta = 0.0
-        self.move = False
+        self.state = State.STOPPED
         self.target_reached = True
+        self.waypoint_conter = 0
 
     def timer_callback(self):
         """Call function for the timer."""
+
+        # publish the frame properties for the tb_1
+        self.transform_publisher()
+
+        self.roll, self.pitch, self.yaw = self.euler_from_quaternion(x= self.ox, y= self.oy, z= self.oz, w= self.ow)
+        # print(f"{self.roll=}, {self.pitch=}, {self.yaw=}")
+        # print(f"{self.x=}, {self.y=}")
+
+        # self.get_logger().info(f"{self.coordinates=}")
+
+        if self.state == State.MOVE_POSE:
+            self.twist_calculator_pose(self.des_x, self.des_y, self.des_theta)
+        if self.state == State.MOVE_PATH:
+            self.twist_calculator_pose(self.waypoints[self.waypoint_conter][0], self.waypoints[self.waypoint_conter][1],
+                                       self.waypoints[self.waypoint_conter][2])
+            self.get_logger().info(f"{self.waypoints[self.waypoint_conter][0]=}, {self.waypoints[self.waypoint_conter][1]=}, \
+                                   {self.waypoints[self.waypoint_conter][2]=}")
+
+    def transform_stamped_callback(self, msg: TransformStamped):
+        """Set the frame properties for the tb_1."""
+
+        self.x = msg.rigidbodies[0].pose.position.x
+        self.y = - msg.rigidbodies[0].pose.position.z
+        self.z = msg.rigidbodies[0].pose.position.y
+        self.ox = msg.rigidbodies[0].pose.orientation.x
+        self.oy = - msg.rigidbodies[0].pose.orientation.z
+        self.oz = msg.rigidbodies[0].pose.orientation.y
+        self.ow = msg.rigidbodies[0].pose.orientation.w
+    
+    def transform_publisher(self):
+        """Publish the frame properties for the tb_1."""
 
         world_tb_1_tf = TransformStamped()
         world_tb_1_tf.header.frame_id = "world"
@@ -120,26 +180,6 @@ class TurtleControl(Node):
         world_tb_1_tf.transform.rotation.z = self.oz
         world_tb_1_tf.transform.rotation.w = self.ow
         self.broadcaster.sendTransform(world_tb_1_tf)
-
-        self.roll, self.pitch, self.yaw = self.euler_from_quaternion(x= self.ox, y= self.oy, z= self.oz, w= self.ow)
-        print(f"{self.roll=}, {self.pitch=}, {self.yaw=}")
-        print(f"{self.x=}, {self.y=}")
-
-        self.get_logger().info(f"{self.coordinates=}")
-
-        if self.move:
-            self.twist_calculator(self.des_x, self.des_y, self.des_theta)
-
-    def transform_stamped_callback(self, msg: TransformStamped):
-        """Set the frame properties for the tb_1."""
-
-        self.x = msg.rigidbodies[0].pose.position.x
-        self.y = - msg.rigidbodies[0].pose.position.z
-        self.z = msg.rigidbodies[0].pose.position.y
-        self.ox = msg.rigidbodies[0].pose.orientation.x
-        self.oy = - msg.rigidbodies[0].pose.orientation.z
-        self.oz = msg.rigidbodies[0].pose.orientation.y
-        self.ow = msg.rigidbodies[0].pose.orientation.w
 
     def euler_from_quaternion(self, x, y, z, w):
         """
@@ -167,18 +207,23 @@ class TurtleControl(Node):
         self.des_x = req.x
         self.des_y = req.y
         self.des_theta = req.theta
-        self.move = True
+        self.state = State.MOVE_POSE
         self.target_reached = False
         res.success = True
         return res
     
     def load_gcode_srv_callback(self, req, res):
+        if len(self.coordinates) > 0:
+            self.waypoint_conter = 0
+            self.state = State.MOVE_PATH
+        else:
+            self.get_logger().error("Could not read coordinates from the gcode file, please load the gcode file first")
         return res
-        
 
-    def twist_calculator(self, target_x, target_y, target_theta):
+    def twist_calculator_pose(self, target_x, target_y, target_theta):
         """Calculate the velocity commands for the turtlebot."""
         
+        self.get_logger().info(f"{target_x=}, {target_y=}, {target_theta=}")
         # current heading
         vec_curr = np.array([np.cos(math.radians(self.yaw)), np.sin(math.radians(self.yaw))])
         # print(f"{vec_curr=}")
@@ -227,7 +272,10 @@ class TurtleControl(Node):
             else:
                 t.linear.x = 0.0
                 t.angular.z = 0.0
-                self.move = False
+                self.waypoint_conter += 1
+                if self.waypoint_conter >= len(self.waypoints):
+                    self.waypoint_conter = 0
+                    self.state = State.STOPPED
 
         self.velocity.publish(t)
 
