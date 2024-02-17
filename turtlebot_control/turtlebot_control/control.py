@@ -17,9 +17,37 @@ from geometry_msgs.msg import TransformStamped
 from geometry_msgs.msg import Point
 
 from custom_interfaces.srv import Pose
+from std_srvs.srv import Empty
 
 import math
 import numpy as np
+
+def read_coordinates_from_file(filename):
+    """
+    Read coordinates from a gcode file
+
+    Args:
+        filename (_type_): filename to read coordinates from
+
+    Returns:
+        _type_: a list of coordinates in the format (g, x, y)
+        where g is the path type indicator and x and y are the coordinates
+        if g = 1, then the light is turned on, else it is turned off
+    """
+    coordinates = []
+    with open(filename, 'r') as file:
+        for line_num, line in enumerate(file):
+            if line_num >= 2: # skip the first two lines
+                tokens = line.strip().split()
+                for token in tokens:
+                    if token.startswith('G'):
+                        g = float(token[1:])
+                    elif token.startswith('X'):
+                        x = float(token[1:])
+                    elif token.startswith('Y'):
+                        y = float(token[1:])
+                        coordinates.append((g, x, y))
+    return coordinates
 
 class TurtleControl(Node):
     """This node publishes velocity commands to control the turtlebot."""
@@ -30,9 +58,12 @@ class TurtleControl(Node):
         # create publisher to send velocity commands to the robot
         self.velocity = self.create_publisher(Twist, "cmd_vel", 10)
 
-        # create service to send desired position to the robot
+        # create service to send desired pose to the robot
         self.position_srv = self.create_service(
             Pose, "pose", self.pose_srv_callback)
+
+        # create service to load gcode file
+        self.load_gcode = self.create_service(Empty, "load_gcode", self.load_gcode_srv_callback)
 
         # dynamic broadcasting
         self.broadcaster = TransformBroadcaster(self)
@@ -42,6 +73,16 @@ class TurtleControl(Node):
         # declare parameters
         self.declare_parameter("frequency", 100.0)
         self.param_frequency = (self.get_parameter("frequency").get_parameter_value().double_value)
+
+        self.declare_parameter("filepath", "")
+        self.param_filepath = (self.get_parameter("filepath").get_parameter_value().string_value)
+
+        try:
+            # read coordinates from the gcode file
+            self.coordinates = read_coordinates_from_file(self.param_filepath)
+        except:
+            self.get_logger().error("Could not read coordinates from the gcode file, please check the filepath parameter")
+            self.coordinates = []
 
         # create the main timer
         self.create_timer(1.0 / self.param_frequency, self.timer_callback)
@@ -83,6 +124,8 @@ class TurtleControl(Node):
         self.roll, self.pitch, self.yaw = self.euler_from_quaternion(x= self.ox, y= self.oy, z= self.oz, w= self.ow)
         print(f"{self.roll=}, {self.pitch=}, {self.yaw=}")
         print(f"{self.x=}, {self.y=}")
+
+        self.get_logger().info(f"{self.coordinates=}")
 
         if self.move:
             self.twist_calculator(self.des_x, self.des_y, self.des_theta)
@@ -128,6 +171,10 @@ class TurtleControl(Node):
         self.target_reached = False
         res.success = True
         return res
+    
+    def load_gcode_srv_callback(self, req, res):
+        return res
+        
 
     def twist_calculator(self, target_x, target_y, target_theta):
         """Calculate the velocity commands for the turtlebot."""
@@ -183,7 +230,6 @@ class TurtleControl(Node):
                 self.move = False
 
         self.velocity.publish(t)
-        # print(t)
 
 def main(args=None):
     rclpy.init(args=args)

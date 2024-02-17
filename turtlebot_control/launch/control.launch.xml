@@ -1,0 +1,10 @@
+<launch>
+<arg name = "gcode_file" default = "$(find-pkg-share turtlebot_control)/gcode/modified_rect.gcode" 
+description = "Name of the gcode file relative to the project's share directory" />
+  
+<node pkg="turtlebot_control" exec="control">
+<param name="frequency" value="100.0"/>
+<param name="filepath" value="$(var gcode_file)"/>
+</node>
+
+</launch>
