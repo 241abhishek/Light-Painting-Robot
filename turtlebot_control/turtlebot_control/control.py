@@ -98,7 +98,7 @@ class TurtleControl(Node):
         self.transform_stamped = self.create_subscription(RigidBodies, "/rigid_bodies", self.transform_stamped_callback, qos_profile=10)
 
         # declare parameters
-        self.declare_parameter("frequency", 100.0)
+        self.declare_parameter("frequency", 250.0)
         self.param_frequency = (self.get_parameter("frequency").get_parameter_value().double_value)
 
         self.declare_parameter("filepath", "")
@@ -151,8 +151,8 @@ class TurtleControl(Node):
         if self.state == State.MOVE_PATH:
             self.twist_calculator_pose(self.waypoints[self.waypoint_conter][0], self.waypoints[self.waypoint_conter][1],
                                        self.waypoints[self.waypoint_conter][2])
-            self.get_logger().info(f"{self.waypoints[self.waypoint_conter][0]=}, {self.waypoints[self.waypoint_conter][1]=}, \
-                                   {self.waypoints[self.waypoint_conter][2]=}")
+            # self.get_logger().info(f"{self.waypoints[self.waypoint_conter][0]=}, {self.waypoints[self.waypoint_conter][1]=}, \
+            #                        {self.waypoints[self.waypoint_conter][2]=}")
 
     def transform_stamped_callback(self, msg: TransformStamped):
         """Set the frame properties for the tb_1."""
@@ -242,13 +242,18 @@ class TurtleControl(Node):
         distance_error = math.sqrt((target_x - self.x) ** 2 + (target_y - self.y) ** 2)
 
         # compute the desired target vector
-        vec_tar = np.array([np.cos(math.radians(target_theta)), np.sin(math.radians(target_theta))])
+        vec_tar = np.array([np.cos(target_theta), np.sin(target_theta)])
         vec_tar_unit = vec_tar / np.linalg.norm(vec_tar) # normalize
         target_yaw_error = math.atan2(np.linalg.det([vec_curr_unit,vec_tar_unit]),np.dot(vec_tar_unit,vec_curr_unit))
-        print(f"{target_yaw_error=}")
+        # self.get_logger().info(f"{target_yaw_error=}")
 
         # compute the velocity commands
         t = Twist()
+        
+        # check if the distance error is greater than 0.05 m,
+        # if so, set the target reached as false
+        if distance_error > 0.05:
+            self.target_reached = False
         # check if the heading error is greater than 10 degrees
         # if so, rotate in the desired direction
         if abs(heading_error) > 0.174533 and self.target_reached == False:
@@ -276,6 +281,7 @@ class TurtleControl(Node):
                 if self.waypoint_conter >= len(self.waypoints):
                     self.waypoint_conter = 0
                     self.state = State.STOPPED
+                    self.get_logger().info(f"Stopping the turtlebot")
 
         self.velocity.publish(t)
 
