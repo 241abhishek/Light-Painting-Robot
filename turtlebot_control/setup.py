@@ -11,7 +11,7 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         ('share/' + package_name + '/gcode',
-         ['gcode/modified_rect.gcode']),
+         ['gcode/path_star.gcode']),
         ('share/' + package_name + '/launch',
          ['launch/control.launch.xml'])
     ],

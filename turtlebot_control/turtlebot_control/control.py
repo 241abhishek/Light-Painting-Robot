@@ -16,6 +16,9 @@ from tf2_ros import TransformBroadcaster
 from geometry_msgs.msg import TransformStamped
 from geometry_msgs.msg import Point
 
+from nav_msgs.msg import Path
+from geometry_msgs.msg import PoseStamped, Quaternion
+
 from custom_interfaces.srv import Pose
 from std_srvs.srv import Empty
 
@@ -97,6 +100,9 @@ class TurtleControl(Node):
 
         self.transform_stamped = self.create_subscription(RigidBodies, "/rigid_bodies", self.transform_stamped_callback, qos_profile=10)
 
+        #create publisther to publish path from waypoints
+        self.path_pub_ = self.create_publisher(Path, 'light_path', 10)
+
         # declare parameters
         self.declare_parameter("frequency", 250.0)
         self.param_frequency = (self.get_parameter("frequency").get_parameter_value().double_value)
@@ -111,6 +117,7 @@ class TurtleControl(Node):
         except:
             self.get_logger().error("Could not read coordinates from the gcode file, please check the filepath parameter")
             self.coordinates = []
+            self.waypoints = []
 
         # create the main timer
         self.create_timer(1.0 / self.param_frequency, self.timer_callback)
@@ -139,6 +146,9 @@ class TurtleControl(Node):
 
         # publish the frame properties for the tb_1
         self.transform_publisher()
+
+        # publish the actual light path for the robot
+        self.publish_path()
 
         self.roll, self.pitch, self.yaw = self.euler_from_quaternion(x= self.ox, y= self.oy, z= self.oz, w= self.ow)
         # print(f"{self.roll=}, {self.pitch=}, {self.yaw=}")
@@ -202,6 +212,29 @@ class TurtleControl(Node):
         yaw_z = math.atan2(t3, t4)
     
         return math.degrees(roll_x), math.degrees(pitch_y), math.degrees(yaw_z) # in degrees
+    
+    def yaw_to_quaternion(self, yaw):
+        """Convert a yaw angle into a quaternion."""
+        quaternion = Quaternion()
+        quaternion.x = 0.0
+        quaternion.y = 0.0
+        quaternion.z = math.sin(yaw / 2)
+        quaternion.w = math.cos(yaw / 2)
+        return quaternion
+    
+    def publish_path(self):
+        """ Publish the actual light path for the turtlebot."""
+        path_msg = Path()
+        path_msg.header.frame_id = "world" 
+
+        for robot_pose in self.waypoints:
+            stamped_pose = PoseStamped()
+            stamped_pose.pose.position.x = robot_pose[0]
+            stamped_pose.pose.position.y = robot_pose[1]
+            stamped_pose.pose.orientation = self.yaw_to_quaternion(robot_pose[2])
+            path_msg.poses.append(stamped_pose)
+
+        self.path_pub_.publish(path_msg)
     
     def pose_srv_callback(self, req, res):
         self.des_x = req.x

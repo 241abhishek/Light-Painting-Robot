@@ -34,10 +34,10 @@ def scale_offset_gcode(input_file, output_file, scale_factor, x_offset, y_offset
         outfile.writelines(modified_lines)
 
 if __name__ == "__main__":
-    input_file = "src/Light-Painting-Robot/waypoint_data/input/rect.gcode"  # Replace with your input file name
-    output_file = "src/Light-Painting-Robot/waypoint_data/output/modified_rect.gcode"  # Replace with your desired output file name
-    scale_factor = 0.002  # Replace with your desired scale factor
-    x_offset = 0.0  # Replace with your desired X offset in mm
-    y_offset = 0.0   # Replace with your desired Y offset in mm
+    input_file = "src/Light-Painting-Robot/waypoint_data/input/star.gcode"  # Replace with your input file name
+    output_file = "src/Light-Painting-Robot/waypoint_data/output/modified.gcode"  # Replace with your desired output file name
+    scale_factor = 0.01  # Replace with your desired scale factor
+    x_offset = 30*0.01  # Replace with your desired X offset in mm
+    y_offset = -40*0.01  # Replace with your desired Y offset in mm
 
     scale_offset_gcode(input_file, output_file, scale_factor, x_offset, y_offset)
