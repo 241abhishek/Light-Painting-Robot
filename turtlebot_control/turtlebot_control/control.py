@@ -4,7 +4,21 @@ Publishes velocity commands to control the turtlebot.
 Publishers
 ----------
     cmd_vel: geometry_msgs/msg/Twist - The velocity of the robot
+    path: nav_msgs/msg/Path - The path of the robot
 
+Subscribers
+-----------
+    /rigid_bodies: mocap4r2_msgs/msg/RigidBodies - The position and orientation of the robot
+
+Services
+--------
+    pose: custom_interfaces/srv/Pose - The desired pose of the robot
+    load_gcode: std_srvs/srv/Empty - Load the gcode file
+
+Parameters
+----------
+    frequency: float - The frequency of the main timer
+    filepath: string - The path to the gcode file
 """
 
 import rclpy
