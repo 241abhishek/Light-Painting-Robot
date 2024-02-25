@@ -29,6 +29,7 @@ from tf2_ros import TransformBroadcaster
 
 from geometry_msgs.msg import TransformStamped
 from geometry_msgs.msg import Point
+from std_msgs.msg import Bool
 
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped, Quaternion
@@ -114,8 +115,11 @@ class TurtleControl(Node):
 
         self.transform_stamped = self.create_subscription(RigidBodies, "/rigid_bodies", self.transform_stamped_callback, qos_profile=10)
 
-        #create publisther to publish path from waypoints
+        # create publisther to publish path from waypoints
         self.path_pub_ = self.create_publisher(Path, 'light_path', 10)
+
+        # create a publisher to publish the first value of the gcode as a boolean
+        self.light_staus_pub = self.create_publisher(Bool, 'light_status', 10)
 
         # declare parameters
         self.declare_parameter("frequency", 250.0)
@@ -165,18 +169,20 @@ class TurtleControl(Node):
         self.publish_path()
 
         self.roll, self.pitch, self.yaw = self.euler_from_quaternion(x= self.ox, y= self.oy, z= self.oz, w= self.ow)
-        # print(f"{self.roll=}, {self.pitch=}, {self.yaw=}")
-        # print(f"{self.x=}, {self.y=}")
 
-        # self.get_logger().info(f"{self.coordinates=}")
-
+        # check the current state of the system
+        # if the state is move pose, call the twist_calculator_pose function
+        # and pass the desired pose as arguments
         if self.state == State.MOVE_POSE:
             self.twist_calculator_pose(self.des_x, self.des_y, self.des_theta)
+            self.light_staus_pub.publish(Bool(data=False))
+        # if the state is move path, call the twist_calculator_pose function
+        # and pass the desired waypoint as arguments
+        # also publish the light status to turn the light on or off
         if self.state == State.MOVE_PATH:
             self.twist_calculator_pose(self.waypoints[self.waypoint_conter][0], self.waypoints[self.waypoint_conter][1],
                                        self.waypoints[self.waypoint_conter][2])
-            # self.get_logger().info(f"{self.waypoints[self.waypoint_conter][0]=}, {self.waypoints[self.waypoint_conter][1]=}, \
-            #                        {self.waypoints[self.waypoint_conter][2]=}")
+            self.light_status_publisher()
 
     def transform_stamped_callback(self, msg: TransformStamped):
         """Set the frame properties for the tb_1."""
@@ -266,6 +272,19 @@ class TurtleControl(Node):
         else:
             self.get_logger().error("Could not read coordinates from the gcode file, please load the gcode file first")
         return res
+    
+    def light_status_publisher(self):
+        """Publish the first value of the gcode as a boolean."""
+        light_status = Bool()
+        if len(self.coordinates) > 0:
+            if self.coordinates[self.waypoint_conter][0] == 1:
+                light_status.data = True
+            else:
+                light_status.data = False
+        else:
+            light_status.data = False
+
+        self.light_staus_pub.publish(light_status)
 
     def twist_calculator_pose(self, target_x, target_y, target_theta):
         """Calculate the velocity commands for the turtlebot."""
@@ -273,17 +292,14 @@ class TurtleControl(Node):
         self.get_logger().info(f"{target_x=}, {target_y=}, {target_theta=}")
         # current heading
         vec_curr = np.array([np.cos(math.radians(self.yaw)), np.sin(math.radians(self.yaw))])
-        # print(f"{vec_curr=}")
         vec_curr_unit = vec_curr / np.linalg.norm(vec_curr) # normalize
 
         # desired heading
         vec_des = np.array([target_x - self.x, target_y - self.y])
-        # print(f"{vec_des=}")
         vec_des_unit = vec_des / np.linalg.norm(vec_des) # normalize
 
         # compute the error in heading wrt the desired movement direction
         heading_error = math.atan2(np.linalg.det([vec_curr_unit,vec_des_unit]),np.dot(vec_des_unit,vec_curr_unit))
-        # print(f"{heading_error=}")
 
         # distance error
         distance_error = math.sqrt((target_x - self.x) ** 2 + (target_y - self.y) ** 2)
@@ -292,7 +308,6 @@ class TurtleControl(Node):
         vec_tar = np.array([np.cos(target_theta), np.sin(target_theta)])
         vec_tar_unit = vec_tar / np.linalg.norm(vec_tar) # normalize
         target_yaw_error = math.atan2(np.linalg.det([vec_curr_unit,vec_tar_unit]),np.dot(vec_tar_unit,vec_curr_unit))
-        # self.get_logger().info(f"{target_yaw_error=}")
 
         # compute the velocity commands
         t = Twist()
