@@ -1,5 +1,5 @@
 <launch>
-<arg name = "gcode_file" default = "$(find-pkg-share turtlebot_control)/gcode/path_star.gcode" 
+<arg name = "gcode_file" default = "$(find-pkg-share turtlebot_control)/gcode/path_smiley.gcode" 
 description = "Name of the gcode file relative to the project's share directory" />
   
 <node pkg="turtlebot_control" exec="control">
