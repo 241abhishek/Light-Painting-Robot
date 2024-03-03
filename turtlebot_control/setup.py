@@ -11,7 +11,7 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         ('share/' + package_name + '/gcode',
-         ['gcode/path_smiley.gcode']),
+         ['gcode/path_Northwestern_Wildcats_logo.gcode']),
         ('share/' + package_name + '/launch',
          ['launch/control.launch.xml'])
     ],

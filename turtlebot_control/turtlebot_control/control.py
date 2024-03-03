@@ -314,17 +314,17 @@ class TurtleControl(Node):
         
         # check if the distance error is greater than 0.05 m,
         # if so, set the target reached as false
-        if distance_error > 0.05:
+        if distance_error > 0.075:
             self.target_reached = False
         # check if the heading error is greater than 10 degrees
         # if so, rotate in the desired direction
         if abs(heading_error) > 0.174533 and self.target_reached == False:
             if heading_error > 0:
-                t.angular.z = 0.3
+                t.angular.z = 0.4
             if heading_error < 0:
-                t.angular.z = -0.3
-        elif distance_error > 0.05:
-            t.linear.x = 0.075
+                t.angular.z = -0.4
+        elif distance_error > 0.075:
+            t.linear.x = 0.15
             if heading_error > 0:
                 t.angular.z = 0.05
             if heading_error < 0:
@@ -333,9 +333,9 @@ class TurtleControl(Node):
             self.target_reached = True
             if abs(target_yaw_error) > 0.0872665:
                 if target_yaw_error > 0:
-                    t.angular.z = 0.3
+                    t.angular.z = 0.4
                 if target_yaw_error < 0:
-                    t.angular.z = -0.3
+                    t.angular.z = -0.4
             else:
                 t.linear.x = 0.0
                 t.angular.z = 0.0
