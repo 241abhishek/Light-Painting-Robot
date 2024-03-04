@@ -21,7 +21,7 @@ def read_calibration_values(filepath):
                 upper_bound = np.array([int(x) for x in line.split(',')])
     return lower_bound, upper_bound
 
-# encapsulate the code into a function
+# display a video file
 def display_video(filepath):
     # read in a video file 
     cap = cv2.VideoCapture(filepath)
@@ -86,7 +86,7 @@ def color_calibration(filepath):
 
     # define frame rate variable
     fps = 100
-    
+
     waitkey_counter = 4
     fps = fps * waitkey_counter
 
@@ -162,9 +162,69 @@ def color_calibration(filepath):
     cap.release()
     cv2.destroyAllWindows()
 
+# paint a picture using the tracked color
+def light_painting(filepath):
+    # read in a video file 
+    cap = cv2.VideoCapture(filepath)
+
+    # Check if the video file is opened successfully
+    if not cap.isOpened():
+        print("Error: Unable to open video file.")
+        return 
+    
+    # read in the calibration values from an external file
+    lower_bound, upper_bound = read_calibration_values(calibration_file)
+
+    # Initialize an empty canvas
+    canvas = np.zeros((480, 640, 3), dtype=np.uint8)
+
+    # define frame rate variable
+    fps = 500
+
+    waitkey_counter = 1
+    fps = fps * waitkey_counter
+
+    # Loop through frames and display them
+    while True:
+        ret, frame = cap.read()
+        # Check if frame is read successfully
+        if not ret:
+            print("Video playback completed.")
+            break
+
+        # resize the video frame
+        frame = cv2.resize(frame, (640, 480))
+
+        # Convert the frame from BGR to HSV
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+        # Create a mask to display the color to track
+        mask = cv2.inRange(hsv, lower_bound, upper_bound)
+
+        # overlay the mask on the original frame
+        color_region = cv2.bitwise_and(frame, frame, mask=mask)
+
+        # Accumulate the moving color regions over frames to create the final image
+        canvas = cv2.add(canvas, color_region)
+
+        # Display the original frame
+        cv2.imshow('Video', frame)
+
+        # Display the accumulated image
+        cv2.imshow('Painting', canvas)
+
+        # Wait for frame rate, and break the loop if 'q' key is pressed
+        if cv2.waitKey(int(1000/fps)) & 0xFF == ord('q'):
+            break
+
+    # Release the video capture object and close all windows
+    cap.release()
+    cv2.destroyAllWindows()
+
 def main():
     filepath = '/home/abhi2001/MSR/winter_2024/winter_project/project_code/src/Light-Painting-Robot/cv_painting/test_videos/Smiley.mp4'
-    color_calibration(filepath)
+    # color_calibration(filepath)
+    light_painting(filepath)
 
 if __name__ == "__main__":
     main()
