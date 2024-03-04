@@ -179,7 +179,7 @@ def light_painting(filepath):
     canvas = np.zeros((480, 640, 3), dtype=np.uint8)
 
     # define frame rate variable
-    fps = 500
+    fps = 1000
 
     waitkey_counter = 1
     fps = fps * waitkey_counter
@@ -190,6 +190,8 @@ def light_painting(filepath):
         # Check if frame is read successfully
         if not ret:
             print("Video playback completed.")
+            # save the final painting to a file
+            cv2.imwrite('final_painting.jpg', canvas)
             break
 
         # resize the video frame
@@ -211,21 +213,20 @@ def light_painting(filepath):
         canvas = cv2.bitwise_and(canvas, canvas, mask=cv2.bitwise_not(mask))
         canvas = cv2.add(canvas, color_region)
 
-        # canvas = cv2.add(canvas, color_region)
-
-        # convert the canvas to a mask
-        # canvas_mask = cv2.inRange(canvas, lower_bound, upper_bound)
-
-        # use the canvas mask to color the painting with the desired color
-
+        # remove noise from the canvas
+        canvas = cv2.medianBlur(canvas, 5)
+        
         # Average the canvas with the frame to create a moving painting
-        final_painting = cv2.addWeighted(frame, 0.5, canvas, 0.5, 0)
+        final_painting = cv2.addWeighted(frame, 0.5, canvas, 0.8, 0)
 
         # Display the original frame
         cv2.imshow('Video', frame)
 
         # Display the color region
         cv2.imshow('Color Region', color_region)
+
+        # Display the canvas
+        cv2.imshow('Canvas', canvas)
 
         # Display the final painting
         cv2.imshow('Final Painting', final_painting)
@@ -238,10 +239,63 @@ def light_painting(filepath):
     cap.release()
     cv2.destroyAllWindows()
 
+# process light painting without displaying the video
+def light_painting_no_display(filepath):
+    # read in a video file 
+    cap = cv2.VideoCapture(filepath)
+
+    # Check if the video file is opened successfully
+    if not cap.isOpened():
+        print("Error: Unable to open video file.")
+        return 
+    
+    # read in the calibration values from an external file
+    lower_bound, upper_bound = read_calibration_values(calibration_file)
+
+    # Initialize an empty canvas
+    canvas = np.zeros((480, 640, 3), dtype=np.uint8)
+
+    # Loop through frames and display them
+    while True:
+        ret, frame = cap.read()
+        # Check if frame is read successfully
+        if not ret:
+            print("Video processing completed.")
+            # save the final painting to a file
+            cv2.imwrite('final_painting_1.jpg', canvas)
+            cv2.imwrite('final_painting_2.jpg', final_painting)
+            break
+
+        # resize the video frame
+        frame = cv2.resize(frame, (640, 480))
+
+        # Convert the frame from BGR to HSV
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+        # Create a mask to display the color to track
+        mask = cv2.inRange(hsv, lower_bound, upper_bound)
+
+        # overlay the mask on the original frame
+        color_region = cv2.bitwise_and(frame, frame, mask=mask)
+        
+        # Accumulate the moving color regions over frames to create the final image
+        # prevent overwriting the canvas that has already been painted
+        # check if canvas region is black, then paint the color region
+        # if not, then do not paint the color region
+        canvas = cv2.bitwise_and(canvas, canvas, mask=cv2.bitwise_not(mask))
+        canvas = cv2.add(canvas, color_region)
+
+        # remove noise from the canvas
+        canvas = cv2.medianBlur(canvas, 5)
+        
+        # Average the canvas with the frame to create a moving painting
+        final_painting = cv2.addWeighted(frame, 0.5, canvas, 0.8, 0)    
+
 def main():
     filepath = '/home/abhi2001/MSR/winter_2024/winter_project/project_code/src/Light-Painting-Robot/cv_painting/test_videos/Smiley.mp4'
     # color_calibration(filepath)
-    light_painting(filepath)
+    # light_painting(filepath)
+    light_painting_no_display(filepath)
 
 if __name__ == "__main__":
     main()
