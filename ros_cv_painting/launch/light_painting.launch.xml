@@ -1,6 +1,10 @@
 <launch>
+<arg name = "calibration_file" default = "$(find-pkg-share ros_cv_painting)/calibration_values/calibration_values.txt" 
+description = "Name of the calibration values file relative to the project's share directory" />
 <include file="$(find-pkg-share realsense2_camera)/launch/rs_launch.py">
     <arg name="depth_module.profile" value="1280x720x6" />
 </include>
-<node pkg="ros_cv_painting" exec="cv_light_painting" />
+<node pkg="ros_cv_painting" exec="cv_light_painting" >
+    <param name="calibration_values_filepath" value="$(var calibration_file)"/>
+</node>
 </launch>
