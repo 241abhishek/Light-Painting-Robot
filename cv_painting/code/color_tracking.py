@@ -292,10 +292,10 @@ def light_painting_no_display(filepath):
         final_painting = cv2.addWeighted(frame, 0.5, canvas, 0.8, 0)    
 
 def main():
-    filepath = '/home/abhi2001/MSR/winter_2024/winter_project/project_code/src/Light-Painting-Robot/cv_painting/test_videos/Smiley.mp4'
-    # color_calibration(filepath)
-    # light_painting(filepath)
-    light_painting_no_display(filepath)
+    filepath = '/home/abhi2001/MSR/winter_2024/winter_project/project_code/src/Light-Painting-Robot/cv_painting/test_videos/C0003.MP4'
+    color_calibration(filepath)
+    light_painting(filepath)
+    # light_painting_no_display(filepath)
 
 if __name__ == "__main__":
     main()

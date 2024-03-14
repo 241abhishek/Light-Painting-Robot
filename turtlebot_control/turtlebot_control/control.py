@@ -289,10 +289,13 @@ class TurtleControl(Node):
     def twist_calculator_pose(self, target_x, target_y, target_theta):
         """Calculate the velocity commands for the turtlebot."""
         
-        self.get_logger().info(f"{target_x=}, {target_y=}, {target_theta=}")
+        # self.get_logger().info(f"{target_x=}, {target_y=}, {target_theta=}")
         # current heading
         vec_curr = np.array([np.cos(math.radians(self.yaw)), np.sin(math.radians(self.yaw))])
         vec_curr_unit = vec_curr / np.linalg.norm(vec_curr) # normalize
+
+        # log yaw
+        # self.get_logger().info(f"{self.yaw=}")
 
         # desired heading
         vec_des = np.array([target_x - self.x, target_y - self.y])
@@ -319,12 +322,14 @@ class TurtleControl(Node):
         # check if the heading error is greater than 10 degrees
         # if so, rotate in the desired direction
         if abs(heading_error) > 0.174533 and self.target_reached == False:
+            # add logging to check the heading error
+            self.get_logger().info(f"{heading_error=}, {distance_error=}")
             if heading_error > 0:
-                t.angular.z = 0.4
+                t.angular.z = 0.2
             if heading_error < 0:
-                t.angular.z = -0.4
-        elif distance_error > 0.075:
-            t.linear.x = 0.15
+                t.angular.z = -0.2
+        elif distance_error > 0.07:
+            t.linear.x = 0.1
             if heading_error > 0:
                 t.angular.z = 0.05
             if heading_error < 0:
@@ -333,9 +338,9 @@ class TurtleControl(Node):
             self.target_reached = True
             if abs(target_yaw_error) > 0.0872665:
                 if target_yaw_error > 0:
-                    t.angular.z = 0.4
+                    t.angular.z = 0.2
                 if target_yaw_error < 0:
-                    t.angular.z = -0.4
+                    t.angular.z = -0.2
             else:
                 t.linear.x = 0.0
                 t.angular.z = 0.0
