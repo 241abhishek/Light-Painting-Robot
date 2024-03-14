@@ -115,11 +115,8 @@ class CvLightPainting(Node):
         # set the draw flag to True
         self.draw = True
 
-        # extract the height and width of the frame
-        height, width, _ = self.frame.shape
-
         # Initialize an empty canvas
-        self.canvas = np.zeros((height, width, 3), dtype=np.uint8)
+        self.canvas = np.zeros((480, 640, 3), dtype=np.uint8)
 
         # return the response
         return response
@@ -195,6 +192,9 @@ class CvLightPainting(Node):
         # create an image from self.frame
         frame = self.frame
 
+        # resize the video frame
+        frame = cv2.resize(frame, (640, 480))
+
         # Convert the frame from BGR to HSV
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
@@ -218,16 +218,16 @@ class CvLightPainting(Node):
         final_painting = cv2.addWeighted(frame, 0.5, self.canvas, 0.8, 0)
 
         # Display the original frame
-        cv2.imshow('Video', frame)
+        cv2.imshow('Original Video', frame)
 
         # Display the color region
-        cv2.imshow('Color Region', color_region)
+        cv2.imshow('Color Tracking', color_region)
 
         # Display the canvas
-        cv2.imshow('Canvas', self.canvas)
+        cv2.imshow('Light Painting', self.canvas)
 
         # Display the final painting
-        cv2.imshow('Final Painting', final_painting)
+        cv2.imshow('Painting Overlay', final_painting)
 
         # Wait for frame rate, and break the loop if 'q' key is pressed
         if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -237,7 +237,8 @@ class CvLightPainting(Node):
         # if key 's' is pressed, then save the painting
         if cv2.waitKey(1) & 0xFF == ord('s'):
             # save the painting to an external file
-            cv2.imwrite('light_painting.jpg', final_painting)
+            cv2.imwrite('light_painting.jpg', self.canvas)
+            cv2.imwrite('overlay.jpg', final_painting)
             cv2.destroyAllWindows()
             self.draw = False
 
