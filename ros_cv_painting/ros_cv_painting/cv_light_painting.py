@@ -53,8 +53,14 @@ class CvLightPainting(Node):
         # create a service to start the calibration procedure
         self.calibrate = self.create_service(Empty, 'calibrate_color', self.calibrate_callback)
 
+        # create a service to start the drawing procedure
+        self.draw = self.create_service(Empty, 'draw_color', self.draw_color_callback)
+
         # intialize the calibration flag
         self.calibration = False
+
+        # initialize the draw flag
+        self.draw = False
 
         # create a timer to process the image
         self.timer = self.create_timer(1.0 / self.param_frequency, self.timer_callback)
@@ -70,6 +76,10 @@ class CvLightPainting(Node):
         # if True, call the calibrate function
         if self.calibration:
             self.calibrate_color()
+
+        # if the draw flag is True, then draw the color on the frame
+        if self.draw:
+            self.draw_color()
 
     def image_callback(self, msg):
         # convert the image message to an opencv image
@@ -97,6 +107,19 @@ class CvLightPainting(Node):
         cv2.setTrackbarPos('Sat Max', 'Video', self.upper_bound[1])
         cv2.setTrackbarPos('Val Min', 'Video', self.lower_bound[2])
         cv2.setTrackbarPos('Val Max', 'Video', self.upper_bound[2])
+
+        # return the response
+        return response
+    
+    def draw_color_callback(self, request, response):
+        # set the draw flag to True
+        self.draw = True
+
+        # extract the height and width of the frame
+        height, width, _ = self.frame.shape
+
+        # Initialize an empty canvas
+        self.canvas = np.zeros((height, width, 3), dtype=np.uint8)
 
         # return the response
         return response
@@ -165,13 +188,58 @@ class CvLightPainting(Node):
             cv2.setTrackbarPos('Val Min', 'Video', self.lower_bound[2])
             cv2.setTrackbarPos('Val Max', 'Video', self.upper_bound[2])
 
+    def draw_color(self):
+        # read in the calibration values from an external file
+        self.lower_bound, self.upper_bound = read_calibration_values(self.calibration_values_filepath)
 
+        # create an image from self.frame
+        frame = self.frame
 
+        # Convert the frame from BGR to HSV
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
+        # Create a mask to display the color to track
+        mask = cv2.inRange(hsv, self.lower_bound, self.upper_bound)
 
+        # overlay the mask on the original frame
+        color_region = cv2.bitwise_and(frame, frame, mask=mask)
+        
+        # Accumulate the moving color regions over frames to create the final image
+        # prevent overwriting the canvas that has already been painted
+        # check if canvas region is black, then paint the color region
+        # if not, then do not paint the color region
+        self.canvas = cv2.bitwise_and(self.canvas, self.canvas, mask=cv2.bitwise_not(mask))
+        self.canvas = cv2.add(self.canvas, color_region)
 
+        # remove noise from the canvas
+        self.canvas = cv2.medianBlur(self.canvas, 5)
+        
+        # Average the canvas with the frame to create a moving painting
+        final_painting = cv2.addWeighted(frame, 0.5, self.canvas, 0.8, 0)
 
+        # Display the original frame
+        cv2.imshow('Video', frame)
 
+        # Display the color region
+        cv2.imshow('Color Region', color_region)
+
+        # Display the canvas
+        cv2.imshow('Canvas', self.canvas)
+
+        # Display the final painting
+        cv2.imshow('Final Painting', final_painting)
+
+        # Wait for frame rate, and break the loop if 'q' key is pressed
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            cv2.destroyAllWindows()
+            self.draw = False
+        
+        # if key 's' is pressed, then save the painting
+        if cv2.waitKey(1) & 0xFF == ord('s'):
+            # save the painting to an external file
+            cv2.imwrite('light_painting.jpg', final_painting)
+            cv2.destroyAllWindows()
+            self.draw = False
 
 def main(args=None):
     rclpy.init(args=args)
