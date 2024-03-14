@@ -62,6 +62,9 @@ class CvLightPainting(Node):
         # initialize the draw flag
         self.draw = False
 
+        # initialize the video
+        self.video = None
+
         # create a timer to process the image
         self.timer = self.create_timer(1.0 / self.param_frequency, self.timer_callback)
 
@@ -217,17 +220,29 @@ class CvLightPainting(Node):
         # Average the canvas with the frame to create a moving painting
         final_painting = cv2.addWeighted(frame, 0.5, self.canvas, 0.8, 0)
 
-        # Display the original frame
-        cv2.imshow('Original Video', frame)
+        # # Display the original frame
+        # cv2.imshow('Original Video', frame)
 
-        # Display the color region
-        cv2.imshow('Color Tracking', color_region)
+        # # Display the color region
+        # cv2.imshow('Color Tracking', color_region)
+
+        # # Display the canvas
+        # cv2.imshow('Light Painting', self.canvas)
+
+        # # Display the final painting
+        # cv2.imshow('Painting Overlay', final_painting)
+
+        # Create a blank canvas to display the images
+        grid = np.zeros((2 * frame.shape[0], 2 * frame.shape[1], 3), dtype=np.uint8)
+
+        # Place the images onto the canvas
+        grid[:frame.shape[0], :frame.shape[1]] = frame
+        grid[:color_region.shape[0], frame.shape[1]:] =color_region
+        grid[frame.shape[0]:, :self.canvas.shape[1]] = self.canvas
+        grid[frame.shape[0]:, frame.shape[1]:] = final_painting
 
         # Display the canvas
-        cv2.imshow('Light Painting', self.canvas)
-
-        # Display the final painting
-        cv2.imshow('Painting Overlay', final_painting)
+        cv2.imshow('Light Painting Grid', grid)
 
         # Wait for frame rate, and break the loop if 'q' key is pressed
         if cv2.waitKey(1) & 0xFF == ord('q'):
