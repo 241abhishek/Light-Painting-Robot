@@ -7,4 +7,5 @@ description = "Name of the gcode file relative to the project's share directory"
 <param name="filepath" value="$(var gcode_file)"/>
 </node>
 
+<include file="$(find-pkg-share ros_cv_painting)/launch/light_painting.launch.xml"/>
 </launch>
