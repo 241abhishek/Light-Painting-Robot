@@ -1,0 +1,17 @@
+repositories:
+  mocap4r2:
+    type: git
+    url: https://github.com/MOCAP4ROS2-Project/mocap4r2.git
+    version: rolling
+  mocap4ros2_optitrack:
+    type: git
+    url: https://github.com/MOCAP4ROS2-Project/mocap4ros2_optitrack.git
+    version: rolling
+  mocap_msgs:
+    type: git
+    url: https://github.com/MOCAP4ROS2-Project/mocap4r2_msgs.git
+    version: rolling
+  svg2gcode:
+    type: git
+    url: git@github.com:sameer/svg2gcode.git
+    version: main
