@@ -6,6 +6,9 @@ from cv_bridge import CvBridge
 import cv2
 
 from std_srvs.srv import Empty
+from std_msgs.msg import Bool
+from custom_interfaces.srv import CircleProp
+from geometry_msgs.msg import Point
 
 import numpy as np
 
@@ -55,6 +58,15 @@ class CvLightPainting(Node):
 
         # create a service to start the drawing procedure
         self.draw = self.create_service(Empty, 'draw_color', self.draw_color_callback)
+
+        # create a service to set the circle properties
+        self.set_circle = self.create_service(CircleProp, 'set_circle', self.set_circle_callback)
+    
+        # create a publisher to the circle_color topic
+        self.color_pub = self.create_publisher(Point, 'circle_color', 10)
+
+        # create a publisher to the light_status topic
+        self.light_pub = self.create_publisher(Bool, 'light_status', 10)
 
         # intialize the calibration flag
         self.calibration = False
@@ -157,6 +169,11 @@ class CvLightPainting(Node):
         if cv2.waitKey(1) & 0xFF == ord('q'):
             cv2.destroyAllWindows()
             self.calibration = False
+
+            # publish a message to the light_status topic
+            msg = Bool()
+            msg.data = False
+            self.light_pub.publish(msg)
         
         # if key 's' is pressed, then save the color to track
         if cv2.waitKey(1) & 0xFF == ord('s'):
@@ -168,6 +185,11 @@ class CvLightPainting(Node):
                 file.write(f'{self.upper_bound[0]},{self.upper_bound[1]},{self.upper_bound[2]}')
             cv2.destroyAllWindows()
             self.calibration = False
+
+            # publish a message to the light_status topic
+            msg = Bool()
+            msg.data = False
+            self.light_pub.publish(msg)
 
         # if key 'r' is pressed, then reset the trackbars to the default min-max values
         if cv2.waitKey(1) & 0xFF == ord('r'):
@@ -256,6 +278,19 @@ class CvLightPainting(Node):
             cv2.imwrite('overlay.jpg', final_painting)
             cv2.destroyAllWindows()
             self.draw = False
+
+    def set_circle_callback(self, request, response):
+        # create a point message
+        point = Point()
+        # set the point message values
+        point.x = float(request.r)
+        point.y = float(request.g)
+        point.z = float(request.b)
+        # publish the point message
+        self.color_pub.publish(point)
+
+        # return the response
+        return response
 
 def main(args=None):
     rclpy.init(args=args)
