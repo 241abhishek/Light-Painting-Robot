@@ -5,6 +5,8 @@ LED matrix](https://www.adafruit.com/product/5362?gad_source=1&gclid=CjwKCAjw48-
 ## Hardware Requirements
 A TurtleBot3 Burger robot fitted with an Adafruit LED matrix and multiple retroreflective markers for pose tracking using the Optitrack Motion Capture system.
 
+![Alt text](images/TurtleBot.JPG)
+
 ## TurtleBot Software Setup
 To SSH into the TurtleBot, run the following command:
 ```
