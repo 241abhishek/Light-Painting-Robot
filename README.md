@@ -2,6 +2,10 @@
 This repository contains code and launch files to create light paintings using the [TurtleBot3](https://emanual.robotis.com/docs/en/platform/turtlebot3/overview/) robot and the [Adafruit RGB
 LED matrix](https://www.adafruit.com/product/5362?gad_source=1&gclid=CjwKCAjw48-vBhBbEiwAzqrZVL83M_J83a_YD0cCXvJ5pjJzY4Eyq7xs4qoPHL9Pc5ig7hY8ce5mwhoCA9MQAvD_BwE).
 
+<div align="center">
+<img src = "images/merged_overlay.jpg" />
+</div>
+
 ## Hardware Requirements
 A TurtleBot3 Burger robot fitted with an Adafruit LED matrix and multiple retroreflective markers for pose tracking using the Optitrack Motion Capture system.
 
@@ -142,3 +146,8 @@ ros2 service call /draw_color std_srvs/srv/Empty
 - Bottom Right - Overlay of the Video with the Light Painting 
 
 Press `s` to save the Light Painting images once the robot has finished drawing or `q` to quit without saving.
+
+## GCODE Generation
+
+Generate GCODE data (proxy for waypoints) for the TurtleBot using the [svg2gcode](https://github.com/sameer/svg2gcode) library. The gcode can be futher modified
+(scaling and offsets) using the `gcode_modifier` program in the `waypoint_data` package.
